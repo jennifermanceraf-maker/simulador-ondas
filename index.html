@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulador interactivo de ondas</title>
+<style>
+:root{color-scheme:light}
+body{font-family:Arial,sans-serif;max-width:940px;margin:26px auto;padding:0 18px;color:#20242a;line-height:1.45}
+h1{font-size:1.55rem;margin-bottom:6px}
+.panel{border:1px solid #d5dbe2;border-radius:12px;padding:18px;margin:14px 0}
+label{display:block;margin:13px 0 5px;font-weight:bold}
+input{width:100%;accent-color:#1769aa}
+canvas{display:block;width:100%;height:auto;border:1px solid #d5dbe2;border-radius:8px;background:#fff}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin:14px 0}
+.metric{background:#f2f5f8;border-radius:8px;padding:10px 12px}
+.metric strong{display:block;font-size:1.1rem;margin-top:3px}
+small{color:#555}
+button{padding:9px 14px;border:1px solid #aaa;border-radius:8px;background:#f5f5f5;cursor:pointer}
+.note{background:#f7f9fb;border-left:4px solid #1769aa;padding:10px 12px}
+</style>
+</head>
+<body>
+<h1>Simulador interactivo: características de una onda</h1>
+<p>Modifica la amplitud, el periodo y la longitud de onda. Observa qué cambia en el dibujo y en los valores calculados.</p>
+<div class="panel">
+  <label for="amp">Amplitud (A): <span id="ampv">1.0</span> unidades</label>
+  <input id="amp" type="range" min="0.2" max="2.5" step="0.1" value="1">
+  <label for="period">Periodo (T): <span id="perv">2.0</span> segundos</label>
+  <input id="period" type="range" min="0.5" max="5" step="0.1" value="2">
+  <label for="lambda">Longitud de onda (λ): <span id="lambdav">4.0</span> unidades</label>
+  <input id="lambda" type="range" min="1" max="8" step="0.1" value="4">
+  <div class="metrics">
+    <div class="metric">Frecuencia (f)<strong id="freq">0.50 Hz</strong></div>
+    <div class="metric">Longitud de onda (λ)<strong id="lambdaout">4.00 unidades</strong></div>
+    <div class="metric">Velocidad (v)<strong id="velocity">2.00 unidades/s</strong></div>
+  </div>
+  <p class="note"><b>Relaciones:</b> frecuencia = 1 ÷ periodo; velocidad = longitud de onda ÷ periodo. Al cambiar el periodo o la longitud de onda, la velocidad calculada puede cambiar.</p>
+  <canvas id="wave" width="900" height="320" aria-label="Gráfica de una onda con crestas, valles, amplitud y longitud de onda"></canvas>
+  <p><small>El dibujo representa una onda en una posición instantánea. La flecha horizontal señala una longitud de onda completa, de cresta a cresta; la flecha vertical señala la amplitud, desde el equilibrio hasta la cresta.</small></p>
+  <button id="reset">Restablecer valores</button>
+</div>
+<div class="panel">
+<b>Preguntas para explorar en clase</b>
+<ol>
+<li>Aumenta la amplitud sin modificar los otros controles. ¿Qué cambia en la altura de las crestas y la profundidad de los valles?</li>
+<li>Aumenta la longitud de onda. ¿Las crestas quedan más juntas o más separadas?</li>
+<li>Disminuye el periodo. ¿Qué sucede con la frecuencia?</li>
+<li>Mantén el periodo fijo y aumenta la longitud de onda. ¿Qué ocurre con la velocidad calculada?</li>
+</ol>
+</div>
+<script>
+const amp=document.getElementById('amp');
+const period=document.getElementById('period');
+const lambda=document.getElementById('lambda');
+const canvas=document.getElementById('wave'),ctx=canvas.getContext('2d');
+function arrow(x1,y1,x2,y2,color='#333'){
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const angle=Math.atan2(y2-y1,x2-x1), head=9;
+  for(const [x,y,a] of [[x1,y1,angle],[x2,y2,angle+Math.PI]]){
+    ctx.beginPath();ctx.moveTo(x,y);
+    ctx.lineTo(x-head*Math.cos(a-0.45),y-head*Math.sin(a-0.45));
+    ctx.lineTo(x-head*Math.cos(a+0.45),y-head*Math.sin(a+0.45));
+    ctx.closePath();ctx.fill();
+  }
+}
+function draw(){
+ const A=+amp.value,T=+period.value,L=+lambda.value;
+ const f=1/T,v=L/T;
+ document.getElementById('ampv').textContent=A.toFixed(1);
+ document.getElementById('perv').textContent=T.toFixed(1);
+ document.getElementById('lambdav').textContent=L.toFixed(1);
+ document.getElementById('freq').textContent=f.toFixed(2)+' Hz';
+ document.getElementById('lambdaout').textContent=L.toFixed(2)+' unidades';
+ document.getElementById('velocity').textContent=v.toFixed(2)+' unidades/s';
+ const w=canvas.width,h=canvas.height,mid=145,scale=34,span=12,pxPerUnit=w/span;
+ ctx.clearRect(0,0,w,h);
+ // Equilibrium and wave
+ ctx.strokeStyle='#aab2bd';ctx.lineWidth=1.5;ctx.setLineDash([7,5]);
+ ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle='#555';ctx.font='15px Arial';ctx.fillText('Línea de equilibrio',12,mid-10);
+ ctx.strokeStyle='#1769aa';ctx.lineWidth=3;ctx.beginPath();
+ for(let px=0;px<=w;px++){
+   const x=px/w*span;
+   const y=mid-A*scale*Math.sin(2*Math.PI*x/L);
+   if(px===0)ctx.moveTo(px,y);else ctx.lineTo(px,y);
+ }
+ ctx.stroke();
+ // Crest and trough labels on first cycle
+ const crestX=(L/4)*pxPerUnit, troughX=(3*L/4)*pxPerUnit;
+ if(crestX<w-50){
+   ctx.fillStyle='#1769aa';ctx.font='bold 15px Arial';
+   ctx.fillText('Cresta',Math.min(crestX+8,w-80),mid-A*scale-12);
+   ctx.fillText('Valle',Math.min(troughX+8,w-65),mid+A*scale+20);
+   // amplitude arrow at first crest
+   arrow(crestX-12,mid,crestX-12,mid-A*scale,'#b45309');
+   ctx.fillStyle='#b45309';ctx.font='bold 14px Arial';
+   ctx.fillText('A',crestX-32,mid-A*scale/2);
+ }
+ // Wavelength arrow from first crest to next crest
+ const x1=(L/4)*pxPerUnit,x2=(5*L/4)*pxPerUnit, yArrow=278;
+ if(x2<w-4){
+   arrow(x1,yArrow,x2,yArrow,'#16804a');
+   ctx.fillStyle='#16804a';ctx.font='bold 15px Arial';
+   ctx.textAlign='center';ctx.fillText('Longitud de onda (λ)',(x1+x2)/2,yArrow-10);ctx.textAlign='left';
+ }else{
+   // fallback marker and clear numerical value if next crest falls beyond displayed window
+   ctx.fillStyle='#16804a';ctx.font='bold 14px Arial';
+   ctx.fillText('λ = '+L.toFixed(1)+' unidades',12,305);
+ }
+}
+[amp,period,lambda].forEach(el=>el.addEventListener('input',draw));
+document.getElementById('reset').addEventListener('click',()=>{
+ amp.value=1;period.value=2;lambda.value=4;draw();
+});
+draw();
+</script>
+</body></html>
